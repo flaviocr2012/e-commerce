@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="dataSourceStorageLocal" created-in="GO-242.21829.165">
+    <data-source name="flaviodb" uuid="e5cc9e4d-583b-46cb-8f11-2cfecea803db">
+      <database-info product="" version="" jdbc-version="" driver-name="" driver-version="" dbms="POSTGRES" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>flavio</user-name>
+      <schema-mapping />
+    </data-source>
+  </component>
+</project>
