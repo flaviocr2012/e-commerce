@@ -7,6 +7,10 @@ type UserRepositoryImpl struct {
 
 }
 
+func NewUserRepository() UserRepository {
+	return &UserRepositoryImpl{}
+}
+
 func (repository UserRepositoryImpl) FindAll() ([]model.User, error) {
 	// Your code here
 	return nil, nil

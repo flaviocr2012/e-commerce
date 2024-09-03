@@ -9,6 +9,12 @@ type UserServiceImpl struct {
 	userRepository repository.UserRepository
 }
 
+func NewUserService() *UserServiceImpl {
+	return &UserServiceImpl{
+		userRepository: repository.NewUserRepository(),
+	}
+}
+
 func (s *UserServiceImpl) GetAllUsers() ([]model.User, error) {
 	return s.userRepository.FindAll()
 }

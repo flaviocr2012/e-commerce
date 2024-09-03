@@ -14,6 +14,13 @@ type UserController struct {
 	userService service.UserService
 }
 
+// NewUserController returns a new instance of UserController
+func NewUserController(userService service.UserService) *UserController {
+	return &UserController{
+		userService: userService,
+	}
+}
+
 func (c *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := c.userService.GetAllUsers()
 	if err != nil {
