@@ -6,6 +6,7 @@ import (
 	"e-commerce/utils"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -52,8 +53,10 @@ func (c *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var user model.User
+
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		log.Printf("Erro ao decodificar o corpo da requisição: %v", err)
 		utils.HandleError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}

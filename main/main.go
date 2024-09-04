@@ -13,7 +13,7 @@ import (
 func main() {
 
 	// Database connection
-	connStr := "user=flavio password=securepassword dbname=flaviodb host=localhost port=5432 sslmode=disable"
+	connStr := "user=flavio password=securepassword dbname=flaviodb host=localhost port=5433 sslmode=disable"
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
