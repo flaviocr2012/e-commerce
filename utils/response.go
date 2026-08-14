@@ -3,25 +3,49 @@ package utils
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
+	"strconv" // Adicione esta linha
+	"github.com/gorilla/mux"
 )
 
-type Response struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
+// ParseID extrai o ID da URL path
+func ParseID(r *http.Request) (int64, error) {
+	// Usa o gorilla/mux para extrair variáveis da URL
+	vars := mux.Vars(r)
+	idStr, ok := vars["id"]
+	if !ok {
+		return 0, &ParseError{Message: "ID not found in URL"}
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return 0, &ParseError{Message: "Invalid ID format"}
+	}
+
+	return id, nil
 }
 
-func HandleError(w http.ResponseWriter, statusCode int, message string) {
-	response := Response{
+// HandleError envia uma resposta de erro JSON
+func HandleError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(Response{
 		Status:  "error",
 		Message: message,
-	}
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(response)
+	})
 }
 
-func ParseID(r *http.Request) (int64, error) {
-	idStr := r.URL.Query().Get("id")
-	return strconv.ParseInt(idStr, 10, 64)
+// Response estrutura padrão para respostas da API
+type Response struct {
+	Status  string      `json:"status"`
+	Data    interface{} `json:"data,omitempty"`
+	Message string      `json:"message,omitempty"`
+}
+
+// ParseError erro de parsing
+type ParseError struct {
+	Message string
+}
+
+func (e *ParseError) Error() string {
+	return e.Message
 }
