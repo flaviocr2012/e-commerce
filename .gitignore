@@ -1,0 +1,67 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+
+# Dependency directories
+vendor/
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Go workspace
+*.mod
+*.sum
+go.work
+go.work.sum
+
+# Temporary files
+tmp/
+temp/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Output
+/bin/
+/dist/
+/build/
+/coverage/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Migration files (if you want to ignore them)
+# db/migrations/*.sql
+
+# Test coverage
+*.cover
+*.coverprofile
