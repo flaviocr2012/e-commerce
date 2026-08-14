@@ -2,22 +2,35 @@ package queries
 
 const (
 	FindAllUsers = `
-        SELECT id, name, email, password, role, address, created_at, updated_at FROM users;
-    `
+		SELECT id, name, email, password, role, address, created_at, updated_at
+		FROM users
+		ORDER BY id
+	`
 
 	FindUserByID = `
-        SELECT id, name, email, password, role, address, created_at, updated_at FROM users WHERE id = $1;
-    `
+		SELECT id, name, email, password, role, address, created_at, updated_at
+		FROM users
+		WHERE id = $1
+	`
 
 	InsertUser = `
-        INSERT INTO users (name, email, password, role, address) VALUES ($1, $2, $3, $4, $5) RETURNING id;
-    `
+		INSERT INTO users (name, email, password, role, address, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		RETURNING id
+	`
 
 	UpdateUser = `
-        UPDATE users SET name = $1, email = $2, password = $3, role = $4, address = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6;
-    `
+		UPDATE users
+		SET name = $1,
+		    email = $2,
+		    role = $3,
+		    address = $4,
+		    updated_at = NOW()
+		WHERE id = $5
+	`
 
 	DeleteUser = `
-        DELETE FROM users WHERE id = $1;
-    `
+		DELETE FROM users
+		WHERE id = $1
+	`
 )
