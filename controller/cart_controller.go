@@ -1,185 +1,157 @@
-package service
+package controller
 
 import (
-	"database/sql"
 	"e-commerce/model"
-	"e-commerce/repository"
-	"errors"
+	"e-commerce/service"
+	"e-commerce/utils"
+	"encoding/json"
 	"log"
+	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
-type CartServiceImpl struct {
-	cartRepository    repository.CartRepository
-	productRepository repository.ProductRepository
+type CartController struct {
+	cartService service.CartService
 }
 
-func NewCartService(
-	cartRepo repository.CartRepository,
-	productRepo repository.ProductRepository,
-) *CartServiceImpl {
-	return &CartServiceImpl{
-		cartRepository:    cartRepo,
-		productRepository: productRepo,
+func NewCartController(cartService service.CartService) *CartController {
+	return &CartController{
+		cartService: cartService,
 	}
 }
 
-func (s *CartServiceImpl) GetCart(userID int64) (*model.Cart, error) {
-	log.Printf("Getting cart for user %d", userID)
+// GetCart handles GET /carts - Get user's cart
+func (c *CartController) GetCart(w http.ResponseWriter, r *http.Request) {
+	// TODO: Get user ID from JWT token (for now, use a hardcoded user ID)
+	userID := int64(1)
 
-	// Get or create cart
-	cart, err := s.getOrCreateCart(userID)
+	cart, err := c.cartService.GetCart(userID)
 	if err != nil {
-		return nil, err
+		log.Printf("Error getting cart: %v", err)
+		utils.HandleError(w, http.StatusInternalServerError, "Failed to get cart")
+		return
 	}
 
-	// Get cart items
-	items, err := s.cartRepository.GetCartItems(cart.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	cart.Items = items
-
-	// Calculate total
-	var total float64
-	for _, item := range items {
-		total += item.Subtotal
-	}
-	cart.Total = total
-
-	return cart, nil
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(cart)
 }
 
-func (s *CartServiceImpl) AddToCart(userID int64, req *model.AddToCartRequest) error {
-	log.Printf("Adding item to cart for user %d: product %d, quantity %d",
-		userID, req.ProductID, req.Quantity)
+// AddToCart handles POST /carts/items - Add item to cart
+func (c *CartController) AddToCart(w http.ResponseWriter, r *http.Request) {
+	var req model.AddToCartRequest
 
-	// Validate product exists and has stock
-	product, err := s.productRepository.FindByID(req.ProductID)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		return errors.New("product not found")
-	}
-	if product.QuantityInStock < req.Quantity {
-		return errors.New("insufficient stock")
+		utils.HandleError(w, http.StatusBadRequest, "Invalid request body")
+		return
 	}
 
-	// Get or create cart
-	cart, err := s.getOrCreateCart(userID)
+	if req.ProductID <= 0 {
+		utils.HandleError(w, http.StatusBadRequest, "Product ID is required")
+		return
+	}
+	if req.Quantity <= 0 {
+		utils.HandleError(w, http.StatusBadRequest, "Quantity must be greater than 0")
+		return
+	}
+
+	userID := int64(1)
+
+	err = c.cartService.AddToCart(userID, &req)
 	if err != nil {
-		return err
+		log.Printf("Error adding to cart: %v", err)
+		utils.HandleError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
-	// Add item to cart
-	_, err = s.cartRepository.AddCartItem(cart.ID, req.ProductID, req.Quantity)
-	if err != nil {
-		log.Printf("Error adding item to cart: %v", err)
-		return err
-	}
-
-	return nil
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Item added to cart successfully",
+	})
 }
 
-func (s *CartServiceImpl) UpdateCartItem(userID int64, itemID int64, req *model.UpdateCartItemRequest) error {
-	log.Printf("Updating cart item %d for user %d to quantity %d",
-		itemID, userID, req.Quantity)
-
-	if req.Quantity < 1 {
-		return errors.New("quantity must be at least 1")
+// UpdateCartItem handles PUT /carts/items/{id} - Update item quantity
+func (c *CartController) UpdateCartItem(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	itemIDStr, ok := vars["id"]
+	if !ok {
+		utils.HandleError(w, http.StatusBadRequest, "Item ID not provided")
+		return
 	}
 
-	// Get user's cart
-	cart, err := s.getOrCreateCart(userID)
+	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)
 	if err != nil {
-		return err
+		utils.HandleError(w, http.StatusBadRequest, "Invalid item ID format")
+		return
 	}
 
-	// Verify item belongs to user's cart
-	item, err := s.cartRepository.GetCartItemByID(itemID, cart.ID)
+	var req model.UpdateCartItemRequest
+	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		return err
-	}
-	if item == nil {
-		return errors.New("item not found in cart")
+		utils.HandleError(w, http.StatusBadRequest, "Invalid request body")
+		return
 	}
 
-	// Update quantity
-	err = s.cartRepository.UpdateCartItemQuantity(itemID, cart.ID, req.Quantity)
+	if req.Quantity <= 0 {
+		utils.HandleError(w, http.StatusBadRequest, "Quantity must be greater than 0")
+		return
+	}
+
+	userID := int64(1)
+
+	err = c.cartService.UpdateCartItem(userID, itemID, &req)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("item not found in cart")
-		}
-		return err
+		log.Printf("Error updating cart item: %v", err)
+		utils.HandleError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
-	return nil
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Cart item updated successfully",
+	})
 }
 
-func (s *CartServiceImpl) RemoveFromCart(userID int64, itemID int64) error {
-	log.Printf("Removing item %d from cart for user %d", itemID, userID)
+// RemoveFromCart handles DELETE /carts/items/{id} - Remove item from cart
+func (c *CartController) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	itemIDStr, ok := vars["id"]
+	if !ok {
+		utils.HandleError(w, http.StatusBadRequest, "Item ID not provided")
+		return
+	}
 
-	// Get user's cart
-	cart, err := s.getOrCreateCart(userID)
+	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)
 	if err != nil {
-		return err
+		utils.HandleError(w, http.StatusBadRequest, "Invalid item ID format")
+		return
 	}
 
-	// Verify item belongs to user's cart
-	item, err := s.cartRepository.GetCartItemByID(itemID, cart.ID)
+	userID := int64(1)
+
+	err = c.cartService.RemoveFromCart(userID, itemID)
 	if err != nil {
-		return err
-	}
-	if item == nil {
-		return errors.New("item not found in cart")
-	}
-
-	// Remove item
-	err = s.cartRepository.RemoveCartItem(itemID, cart.ID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("item not found in cart")
-		}
-		return err
+		log.Printf("Error removing from cart: %v", err)
+		utils.HandleError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
-	return nil
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *CartServiceImpl) ClearCart(userID int64) error {
-	log.Printf("Clearing cart for user %d", userID)
+// ClearCart handles DELETE /carts/clear - Clear entire cart
+func (c *CartController) ClearCart(w http.ResponseWriter, r *http.Request) {
+	userID := int64(1)
 
-	// Get user's cart
-	cart, err := s.getOrCreateCart(userID)
+	err := c.cartService.ClearCart(userID)
 	if err != nil {
-		return err
+		log.Printf("Error clearing cart: %v", err)
+		utils.HandleError(w, http.StatusInternalServerError, "Failed to clear cart")
+		return
 	}
 
-	// Clear cart items
-	err = s.cartRepository.ClearCart(cart.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Helper method to get or create a cart for a user
-func (s *CartServiceImpl) getOrCreateCart(userID int64) (*model.Cart, error) {
-	cart, err := s.cartRepository.GetCartByUserID(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	if cart == nil {
-		log.Printf("Creating new cart for user %d", userID)
-		cartID, err := s.cartRepository.CreateCart(userID)
-		if err != nil {
-			return nil, err
-		}
-		cart = &model.Cart{
-			ID:     cartID,
-			UserID: userID,
-		}
-	}
-
-	return cart, nil
+	w.WriteHeader(http.StatusNoContent)
 }

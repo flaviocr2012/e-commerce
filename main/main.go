@@ -8,6 +8,10 @@ import (
 	"e-commerce/service"
 	"log"
 	"net/http"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -23,6 +27,11 @@ func main() {
 	defer db.Close()
 
 	log.Println("Database connected successfully")
+
+	// Run migrations (opcional - comentar se já executou manualmente)
+	// if err := runMigrations(); err != nil {
+	// 	log.Printf("Warning: Migration failed: %v", err)
+	// }
 
 	// Initialize repositories
 	userRepository := repository.NewUserRepository(db)
@@ -49,18 +58,18 @@ func main() {
 	}
 }
 
-    // runMigrations handles database migrations
-    func runMigrations() error {
-        m, err := migrate.New(
-            "file://db/migrations",
-            "postgres://flavio:securepassword@localhost:5433/flaviodb?sslmode=disable")
-        if err != nil {
-            return err
-        }
+// runMigrations handles database migrations
+func runMigrations() error {
+	m, err := migrate.New(
+		"file://db/migrations",
+		"postgres://flavio:securepassword@localhost:5433/flaviodb?sslmode=disable")
+	if err != nil {
+		return err
+	}
 
-        if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-            return err
-        }
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
 
-        return nil
-    }
+	return nil
+}
