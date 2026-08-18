@@ -5,11 +5,15 @@ import (
 	"e-commerce/utils"
 	"encoding/json"
 	"net/http"
+
 	"github.com/gorilla/mux"
 )
 
-// SetUpRouter sets up the router with all the necessary routes and middlewares
-func SetUpRouter(userController *controller.UserController, productController *controller.ProductController) *mux.Router {
+func SetUpRouter(
+	userController *controller.UserController,
+	productController *controller.ProductController,
+	cartController *controller.CartController,
+) *mux.Router {
 	r := mux.NewRouter()
 
 	// Apply middleware
@@ -19,9 +23,9 @@ func SetUpRouter(userController *controller.UserController, productController *c
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"status":   "API is running",
-			"version":  "1.0",
-			"endpoints": "/users, /users/{id}, /products, /products/{id}",
+			"status":    "API is running",
+			"version":   "1.0",
+			"endpoints": "/users, /users/{id}, /products, /products/{id}, /carts",
 		})
 	}).Methods("GET")
 
@@ -38,6 +42,13 @@ func SetUpRouter(userController *controller.UserController, productController *c
 	r.HandleFunc("/products", productController.CreateProduct).Methods("POST")
 	r.HandleFunc("/products/{id}", productController.UpdateProduct).Methods("PUT")
 	r.HandleFunc("/products/{id}", productController.DeleteProduct).Methods("DELETE")
+
+	// Cart routes
+	r.HandleFunc("/carts", cartController.GetCart).Methods("GET")
+	r.HandleFunc("/carts/items", cartController.AddToCart).Methods("POST")
+	r.HandleFunc("/carts/items/{id}", cartController.UpdateCartItem).Methods("PUT")
+	r.HandleFunc("/carts/items/{id}", cartController.RemoveFromCart).Methods("DELETE")
+	r.HandleFunc("/carts/clear", cartController.ClearCart).Methods("DELETE")
 
 	return r
 }
